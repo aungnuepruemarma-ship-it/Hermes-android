@@ -90,6 +90,19 @@ debug APK is produced. (A sample keystore can be generated with the script in
 `scripts/gen_keystore.py` if you need a throwaway one for testing — do not
 commit the keystore or its password.)
 
+### Tag a release (publish a GitHub Release)
+
+`.github/workflows/release.yml` builds the **signed** APK and publishes it as a
+GitHub Release whenever you push a `v*` tag:
+
+```bash
+git tag v1.0.0
+git push origin v1.0.0        # triggers release.yml -> signed APK + GitHub Release
+```
+
+This requires the four secrets above to be set; otherwise the job fails fast
+with a clear "Missing signing secrets" error.
+
 ## Auth model (verified)
 
 - Dashboard bound to **127.0.0.1** → no OAuth gate.
