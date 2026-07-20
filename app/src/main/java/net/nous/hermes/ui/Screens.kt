@@ -56,7 +56,7 @@ fun HomeScreen(vm: HermesViewModel, onNavigate: (String) -> Unit) {
         stats?.let { s ->
             Text("CPU cores: ${s.cpuCount ?: "?"}")
             s.memory?.let { m ->
-                Text("RAM: ${m.percent?.toInt()}%  (${(m.used ?: 0) / 1_048_576} / ${(m.total ?: 0) / 1_048_576} MB)")
+                Text("RAM: ${m.percent?.toInt()}%  (${(m.usedBytes ?: 0) / 1_048_576} / ${(m.totalBytes ?: 0) / 1_048_576} MB)")
             }
             s.disk?.let { d ->
                 Text("Disk: ${d.percent?.toInt()}% used")

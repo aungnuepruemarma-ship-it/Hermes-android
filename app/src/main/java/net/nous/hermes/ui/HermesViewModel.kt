@@ -160,17 +160,28 @@ class HermesViewModel : ViewModel() {
         }
     }
 
-    private fun refreshTools() = relaunch { getToolsets() }(_toolsets)
-    private fun refreshSkills() = relaunch { getSkills() }(_skills)
-    private fun refreshCron() = relaunch { getCronJobs() }(_cron)
-    private fun refreshMemory() = relaunch { getMemory() }(_memory)
-
-    private fun <T> relaunch(block: suspend net.nous.hermes.net.HermesApi.() -> T): (MutableStateFlow<T>) -> Unit =
-        { flow ->
-            val a = api ?: return@relaunch
-            viewModelScope.launch {
-                runCatching { a.block() }.onSuccess { flow.value = it }
-                    .onFailure { _error.value = it.message }
-            }
+    private fun refreshTools() {
+        val a = api ?: return
+        viewModelScope.launch {
+            runCatching { a.getToolsets() }.onSuccess { _toolsets.value = it }.onFailure { _error.value = it.message }
         }
+    }
+    private fun refreshSkills() {
+        val a = api ?: return
+        viewModelScope.launch {
+            runCatching { a.getSkills() }.onSuccess { _skills.value = it }.onFailure { _error.value = it.message }
+        }
+    }
+    private fun refreshCron() {
+        val a = api ?: return
+        viewModelScope.launch {
+            runCatching { a.getCronJobs() }.onSuccess { _cron.value = it }.onFailure { _error.value = it.message }
+        }
+    }
+    private fun refreshMemory() {
+        val a = api ?: return
+        viewModelScope.launch {
+            runCatching { a.getMemory() }.onSuccess { _memory.value = it }.onFailure { _error.value = it.message }
+        }
+    }
 }
