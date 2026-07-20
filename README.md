@@ -85,6 +85,27 @@ stdout.
   (`/api/config/raw`). Project-file browsing would require an upstream
   sandboxed file API.
 
+## Build in GitHub Codespaces (no local Android Studio)
+
+This repo ships a `.devcontainer/` that installs JDK 17 + the Android SDK
+(build-tools 34, platform 34) and generates the Gradle wrapper.
+
+1. On the repo, click **Code → Codespaces → Create codespace on main**.
+2. Wait for the container to build (installs SDK + `./gradlew`).
+3. In the terminal:
+   ```bash
+   ./gradlew assembleDebug --no-daemon
+   # APK: app/build/outputs/apk/debug/app-debug.apk
+   ```
+4. For a signed release, set the four env vars
+   (`HERMES_KEYSTORE_PATH`, `HERMES_KEYSTORE_PASSWORD`, `HERMES_KEY_ALIAS`,
+   `HERMES_KEY_PASSWORD`) and run `./gradlew assembleRelease`.
+5. **Note:** the app talks to `hermes dashboard` over loopback inside Termux
+   on a *real Android device*. In Codespaces there is no Termux/Hermes
+   runtime, so the app builds and the API client compiles, but it cannot
+   connect to a live backend here. Use Codespaces for building/signing the
+   APK and editing code; test the running app on a phone with Termux.
+
 ## Project layout
 
 ```

@@ -1,0 +1,27 @@
+{
+  "name": "Hermes Android",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "google.java.format",
+        "vscjava.vscode-gradle",
+        "jetbrains.kotlin"
+      ],
+      "settings": {
+        "java.format.enabled": true
+      }
+    }
+  },
+  "remoteEnv": {
+    "ANDROID_HOME": "/opt/android-sdk",
+    "ANDROID_SDK_ROOT": "/opt/android-sdk"
+  },
+  "features": {
+    "ghcr.io/devcontainers/features/github-cli:1": {}
+  },
+  "forwardPorts": [8080, 9119],
+  "postCreateCommand": "chmod +x ./gradlew 2>/dev/null || true"
+}
