@@ -36,7 +36,9 @@ android {
         compose = true
     }
     composeOptions {
-        kotlinCompilerExtensionVersion = "1.9.24"
+        // Compose compiler version is INDEPENDENT of the Kotlin version.
+        // For Kotlin 1.9.24 the matching Compose compiler is 1.5.14.
+        kotlinCompilerExtensionVersion = "1.5.14"
     }
     packaging {
         resources {
