@@ -38,18 +38,57 @@ stdout.
 
 ## Build & run (Android Studio)
 
-1. Open this folder (`android/hermes`) as an Android project.
-2. Let Gradle sync (downloads Gradle 8.9 via the wrapper).
+1. Open this repository folder as an Android project (the Android app lives at
+   the **repo root**, not under `android/hermes/`).
+2. Let Gradle sync (the CI uses Gradle 8.9; locally provide a wrapper or set
+   `gradle-version`).
 3. `File ▸ Sync Project with Gradle Files`.
 4. Connect a device/emulator with Termux + `hermes` installed.
 5. Run `app`. On launch it starts the dashboard in Termux and renders the
    home screen once the token is read from `EncryptedSharedPreferences`.
 
-> This project was authored without an Android SDK present, so it has not been
-> compiled here. The Kotlin is internally consistent and every network call
-> was verified against a live `hermes dashboard` instance. First build in
-> Android Studio will resolve the version catalog and may download the Gradle
-> distribution.
+> This project was authored without an Android SDK present, so it was not
+> compiled locally. It IS compiled and verified by the GitHub Actions CI
+> (`.github/workflows/build.yml`), which builds a debug APK on every push.
+> First local build in Android Studio will resolve the version catalog and
+> download the Gradle distribution.
+
+## Get the APK (no Android Studio needed)
+
+The CI builds a debug APK automatically on every push to `main`.
+
+1. Open **Actions → "Build Android APK"** on the repo.
+2. Open the latest run → **Artifacts** → download `hermes-android-debug`.
+3. Install on your device:
+   ```bash
+   adb install -r app-debug.apk        # from a PC with adb
+   # or copy app-debug.apk to Downloads and tap it (enable "Install unknown apps")
+   ```
+4. In Termux, start the backend the app expects:
+   ```bash
+   hermes dashboard --host 127.0.0.1 --port 9119 --no-open
+   ```
+5. Open the Hermes app, grant the foreground-service permission, and it
+   connects over loopback (127.0.0.1:9119).
+
+## Signed release (CI)
+
+The `release` job in the workflow builds a **signed** APK, but only when the
+repo has these four GitHub Actions secrets set (Settings → Secrets and
+variables → Actions → New repository secret):
+
+| Secret              | Value                                        |
+|---------------------|----------------------------------------------|
+| `KEYSTORE_BASE64`   | base64 of a PKCS12 keystore                  |
+| `KEYSTORE_PASSWORD` | keystore password                            |
+| `KEY_ALIAS`         | key alias (e.g. `hermes`)                    |
+| `KEY_PASSWORD`      | key password                                 |
+
+When all four are present, the release job runs `assembleRelease` and uploads
+`hermes-android-release`. Without them, the release job is a no-op and only the
+debug APK is produced. (A sample keystore can be generated with the script in
+`scripts/gen_keystore.py` if you need a throwaway one for testing — do not
+commit the keystore or its password.)
 
 ## Auth model (verified)
 
@@ -85,61 +124,60 @@ stdout.
   (`/api/config/raw`). Project-file browsing would require an upstream
   sandboxed file API.
 
-## Build in GitHub Codespaces (no local Android Studio)
+## Build in GitHub Actions (no local Android Studio)
 
-This repo ships a `.devcontainer/` that installs JDK 17 + the Android SDK
-(build-tools 34, platform 34) and generates the Gradle wrapper.
+This repo ships `.github/workflows/build.yml`, which builds the debug APK on
+every push/PR (and via `workflow_dispatch`). It provisions JDK 17 + Android
+SDK 34 and Gradle 8.9 — no committed wrapper needed. The signed release job
+runs only when the four secrets above are set.
 
-1. On the repo, click **Code → Codespaces → Create codespace on main**.
-2. Wait for the container to build (installs SDK + `./gradlew`).
-3. In the terminal:
-   ```bash
-   ./gradlew assembleDebug --no-daemon
-   # APK: app/build/outputs/apk/debug/app-debug.apk
-   ```
-4. For a signed release, set the four env vars
-   (`HERMES_KEYSTORE_PATH`, `HERMES_KEYSTORE_PASSWORD`, `HERMES_KEY_ALIAS`,
-   `HERMES_KEY_PASSWORD`) and run `./gradlew assembleRelease`.
-5. **Note:** the app talks to `hermes dashboard` over loopback inside Termux
-   on a *real Android device*. In Codespaces there is no Termux/Hermes
-   runtime, so the app builds and the API client compiles, but it cannot
-   connect to a live backend here. Use Codespaces for building/signing the
-   APK and editing code; test the running app on a phone with Termux.
+You do not need Codespaces or a local SDK to obtain a working APK — just pull
+the `hermes-android-debug` artifact from the latest Actions run (see "Get the
+APK" above).
 
-A `Makefile` provides one-command builds:
+A `Makefile` provides one-command builds for a local environment that *does*
+have the Android SDK:
+
 ```bash
-make apk           # debug APK (auto-runs on Codespace creation)
+make apk           # debug APK
 make release       # signed release (needs HERMES_KEY_* env vars)
 make install-adb   # sideload debug APK via adb
 make clean         # wipe build outputs
 ```
+
+> A `.devcontainer/` (JDK17 + Android SDK) is still included for editor
+> convenience, but Codespaces creation for this repo requires `codespace`
+> scope + repo admin, which is gated on the GitHub side — the Actions path
+> above is the reliable one.
 ## Project layout
 
 ```
-android/hermes/
+.                               # repo root = Android project root
 ├── settings.gradle.kts
 ├── build.gradle.kts
-├── gradle/                  # version catalog + wrapper (Gradle 8.9)
-├── scripts/launch_dash.sh   # reference: how the token is injected
+├── gradle/                     # version catalog + wrapper.properties (Gradle 8.9)
+├── Makefile
+├── scripts/launch_dash.sh      # reference: how the token is injected
+├── .github/workflows/build.yml # CI: debug + (optional) signed release
 └── app/
     ├── build.gradle.kts
     ├── proguard-rules.pro
-    ├── src/main/
-    │   ├── AndroidManifest.xml
-    │   ├── res/values/{strings,themes}.xml
-    │   └── java/net/nous/hermes/
-    │       ├── MainActivity.kt                 # NavHost + service start
-    │       ├── net/
-    │       │   ├── AuthInterceptor.kt          # token + Host header
-    │       │   ├── HermesClient.kt             # Retrofit interface
-    │       │   ├── HermesWebSocket.kt          # WS client (pty/ws/pub)
-    │       │   └── models/HermesModels.kt      # DTOs (verified shapes)
-    │       ├── service/
-    │       │   ├── HermesLauncherService.kt    # foreground service
-    │       │   └── EncryptedPrefs.kt           # token store
-    │       └── ui/
-    │           ├── HermesViewModel.kt          # state + actions
-    │           └── Screens.kt                  # all composable screens
+    └── src/main/
+        ├── AndroidManifest.xml
+        ├── res/values/{strings,themes}.xml
+        └── java/net/nous/hermes/
+            ├── MainActivity.kt                 # NavHost + service start
+            ├── net/
+            │   ├── AuthInterceptor.kt          # token + Host header
+            │   ├── HermesClient.kt             # Retrofit interface
+            │   ├── HermesWebSocket.kt          # WS client (pty/ws/pub)
+            │   └── models/HermesModels.kt      # DTOs (verified shapes)
+            ├── service/
+            │   ├── HermesLauncherService.kt    # foreground service
+            │   └── EncryptedPrefs.kt           # token store
+            └── ui/
+                ├── HermesViewModel.kt          # state + actions
+                └── Screens.kt                  # all composable screens
 ```
 
 ## Security notes
