@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- The Hermes dashboard runs as a plain-HTTP FastAPI server on loopback
+         inside Termux. Android blocks cleartext by default (API 28+), so we
+         explicitly permit cleartext traffic to localhost/127.0.0.1 only. -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">127.0.0.1</domain>
+        <domain includeSubdomains="false">localhost</domain>
+        <domain includeSubdomains="false">[::1]</domain>
+    </domain-config>
+</network-security-config>
