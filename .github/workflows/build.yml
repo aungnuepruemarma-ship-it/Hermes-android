@@ -1,0 +1,96 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Accept SDK licenses
+        run: yes | sdkmanager --licenses || true
+
+      - name: Install build tools
+        run: sdkmanager "build-tools;34.0.0" "platforms;android-34"
+
+      # gradle-build-action provisions Gradle from gradle-wrapper.properties
+      # (no committed gradlew/jar required) and runs the build.
+      - name: Build debug APK
+        uses: gradle/gradle-build-action@v3
+        with:
+          build-root-directory: android/hermes
+          arguments: assembleDebug --no-daemon
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: hermes-android-debug
+          path: android/hermes/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    # Only sign + produce a release APK when secrets are configured and we're
+    # on a push (not PRs, which lack secret access).
+    if: github.event_name != 'pull_request'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Accept SDK licenses
+        run: yes | sdkmanager --licenses || true
+
+      - name: Install build tools
+        run: sdkmanager "build-tools;34.0.0" "platforms;android-34"
+
+      - name: Decode signing key
+        # Store BASE64_KEYSTORE as a repo/org secret.
+        if: ${{ env.KEYSTORE_BASE64 != '' }}
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: echo "$KEYSTORE_BASE64" | base64 -d > android/hermes/release.keystore
+
+      - name: Build release APK
+        if: ${{ env.KEYSTORE_BASE64 != '' }}
+        uses: gradle/gradle-build-action@v3
+        env:
+          HERMES_KEYSTORE_PATH: ${{ github.workspace }}/android/hermes/release.keystore
+          HERMES_KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          HERMES_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          HERMES_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        with:
+          build-root-directory: android/hermes
+          arguments: assembleRelease --no-daemon
+
+      - name: Upload release APK
+        if: ${{ env.KEYSTORE_BASE64 != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: hermes-android-release
+          path: android/hermes/app/build/outputs/apk/release/*.apk
+          if-no-files-found: error

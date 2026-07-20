@@ -1,0 +1,22 @@
+# Build artifacts
+*.apk
+*.aab
+/build/
+**/build/
+.gradle/
+local.properties
+release.keystore
+
+# Android Studio / IDE
+*.iml
+.idea/
+.DS_Store
+captures/
+
+# OS
+Thumbs.db
+
+# Secrets (never commit)
+*.jks
+*.keystore
+.env
