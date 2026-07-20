@@ -23,5 +23,5 @@
     "ghcr.io/devcontainers/features/github-cli:1": {}
   },
   "forwardPorts": [8080, 9119],
-  "postCreateCommand": "chmod +x ./gradlew 2>/dev/null || true"
+  "postCreateCommand": "chmod +x ./gradlew && make apk"
 }

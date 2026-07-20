@@ -106,6 +106,13 @@ This repo ships a `.devcontainer/` that installs JDK 17 + the Android SDK
    connect to a live backend here. Use Codespaces for building/signing the
    APK and editing code; test the running app on a phone with Termux.
 
+A `Makefile` provides one-command builds:
+```bash
+make apk           # debug APK (auto-runs on Codespace creation)
+make release       # signed release (needs HERMES_KEY_* env vars)
+make install-adb   # sideload debug APK via adb
+make clean         # wipe build outputs
+```
 ## Project layout
 
 ```
